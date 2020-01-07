@@ -64,11 +64,12 @@ func checkBridgeNetFiltering(config *networkConfiguration, i *bridgeInterface) e
 		if err != nil {
 			logrus.Warnf("failed to check %s forwarding: %v", ipVerName, err)
 		} else if enabled {
-			enabled, err := getKernelBoolParam(getBridgeNFKernelParam(ipVer))
+			bridgeName := i.Link.Attrs().Name
+			enabled, err := getKernelBoolParam(getBridgeNFKernelParam(ipVer, bridgeName))
 			if err != nil || enabled {
 				return err
 			}
-			return setKernelBoolParam(getBridgeNFKernelParam(ipVer), true)
+			return setKernelBoolParam(getBridgeNFKernelParam(ipVer, bridgeName), true)
 		}
 		return nil
 	}
@@ -108,12 +109,12 @@ func getForwardingKernelParam(ipVer ipVersion, iface string) string {
 
 // Get kernel param path saying whether bridged IPv${ipVer} traffic shall be
 // passed to ip${ipVer}tables' chains.
-func getBridgeNFKernelParam(ipVer ipVersion) string {
+func getBridgeNFKernelParam(ipVer ipVersion, bridgeName string) string {
 	switch ipVer {
 	case ipv4:
-		return "/proc/sys/net/bridge/bridge-nf-call-iptables"
+		return fmt.Sprintf("/sys/class/net/%s/bridge/nf_call_iptables", bridgeName)
 	case ipv6:
-		return "/proc/sys/net/bridge/bridge-nf-call-ip6tables"
+		return fmt.Sprintf("/sys/class/net/%s/bridge/nf_call_ip6tables", bridgeName)
 	default:
 		return ""
 	}
